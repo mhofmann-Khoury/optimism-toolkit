@@ -63,16 +63,19 @@ class Heuristic_Map:
             objective_modifier_keys = {}
         if modifier_keys is None:
             modifier_keys = {}
+        for enum in Modifier_Keys:
+            modifier_keys[enum] = enum
+        for enum in Objective_Modifier_Keys:
+            objective_modifier_keys[enum] = enum
+        self._modifier_keys: Dict[Union[str, Enum], Callable] = modifier_keys
+        self._objective_modifier_keys: Dict[Union[str, Enum], Callable] = objective_modifier_keys
         self._heuristic_weights: Dict[Modifier: Dict[Objective, float]] = heuristic_weights
+        self._update_by_heuristic_weights()
+
+    def _update_by_heuristic_weights(self):
         self._add_objectives()
         self._total_modifier_weight: Dict[Modifier: float] = {m: sum(w for w in self._heuristic_weights[m].values())
                                                               for m in self}
-        self._modifier_keys: Dict[Union[str, Enum], Callable] = modifier_keys
-        self._objective_modifier_keys: Dict[Union[str, Enum], Callable] = objective_modifier_keys
-        for enum in Modifier_Keys:
-            self._modifier_keys[enum] = enum
-        for enum in Objective_Modifier_Keys:
-            self._objective_modifier_keys[enum] = enum
         self.sorted_modifiers: Dict[Union[str, Enum], SortedKeyList[Modifier]] = {s: SortedKeyList(self.modifiers, key=k) for s, k in self._modifier_keys.items()}
         self.objective_sorted_modifiers: Dict[Objective, Dict[Union[str, Enum], SortedKeyList[Modifier]]] = {o: {s: SortedKeyList(self.modifiers, key=lambda modifier: k(modifier=modifier,
                                                                                                                                                                          objective=o,
@@ -80,6 +83,17 @@ class Heuristic_Map:
                                                                                                                                   )
                                                                                                                  for s, k in self._objective_modifier_keys.items()}
                                                                                                              for o in self.objectives}
+
+    def add_heuristic_weights(self, heuristic_weights: Dict[Modifier, Dict[Objective, float]]):
+        """
+        :param heuristic_weights: New heuristic weights to add to heuristic map
+        """
+        for modifier, objective_weights in heuristic_weights.items():
+            if modifier not in self._heuristic_weights:
+                self._heuristic_weights[modifier] = {}
+            for objective, weight in objective_weights.items():
+                self._heuristic_weights[modifier][objective] = weight
+        self._update_by_heuristic_weights()
 
     def _add_objectives(self):
         for m in self.modifiers:

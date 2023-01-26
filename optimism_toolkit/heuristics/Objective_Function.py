@@ -1,6 +1,6 @@
 """Class for managing secularized multi-objective function"""
 
-from typing import Any, Tuple, Dict
+from typing import Any, Tuple, Dict, Optional
 
 from heuristics.heuristic_functions import Objective
 
@@ -11,8 +11,19 @@ class Objective_Function:
         Process for evaluating a design in a given optimization
     """
 
-    def __init__(self, objectives_to_weights: Dict[Objective, float]):
+    def __init__(self, objectives_to_weights: Optional[Dict[Objective, float]] = None):
+        if objectives_to_weights is None:
+            objectives_to_weights = {}
         self.objectives_to_weights: Dict[Objective, float] = objectives_to_weights
+        self._total_weight: float = sum(self.objectives_to_weights.values())
+
+    def add_objective_by_weight(self, objective: Objective, weight: float):
+        """
+        add objective by weight to the objective function
+        :param objective: objective to add
+        :param weight: weight on objective
+        """
+        self.objectives_to_weights[objective] = weight
         self._total_weight: float = sum(self.objectives_to_weights.values())
 
     @property

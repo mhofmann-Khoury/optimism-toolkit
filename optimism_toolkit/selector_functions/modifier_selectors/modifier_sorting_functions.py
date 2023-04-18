@@ -46,6 +46,17 @@ def sorted_by_modifier_score_decreases(heuristic_map: Heuristic_Map, **_) -> Ite
     return heuristic_map.sorted_modifiers[Modifier_Keys.Score_Decreases]
 
 
+def sorted_by_modifier_objective_key(heuristic_map: Heuristic_Map, objective: Objective, sort_key: str, **_) -> Iterable[Modifier]:
+    """
+
+    :param heuristic_map: map of modifiers to objectives
+    :param objective: objective to check scores
+    :param sort_key: key name to access values by
+    :return: modifiers sorted by given key
+    """
+    return heuristic_map.objective_sorted_modifiers[objective][sort_key]
+
+
 def sorted_by_modifier_objective_changes(heuristic_map: Heuristic_Map, objective: Objective, **_) -> Iterable[Modifier]:
     """
     :param objective: objective to check scores
@@ -82,6 +93,18 @@ def sorted_modifier_objective_value(heuristic_map: Heuristic_Map, objective: Obj
     return heuristic_map.objective_sorted_modifiers[objective][Objective_Modifier_Keys.Value]
 
 
+def sorted_modifier_by_most_important_objective(heuristic_map: Heuristic_Map, design_iteration: Design_Iteration, sort_key: str, **_) -> Iterable[Modifier]:
+    """
+
+    :param heuristic_map: map of modifiers to objectives
+    :param design_iteration: design iteration to determine most important objective
+    :param sort_key: key to sort modifiers by
+    :return: modifiers sorted by sort key on most important objective to iteration
+    """
+    most_important, objective = design_iteration.objectives_by_scores[-1]
+    return sorted_by_modifier_objective_key(heuristic_map, objective, sort_key)
+
+
 def sorted_modifier_by_changes_on_lowest_scoring_objective(heuristic_map: Heuristic_Map,
                                                            design_iteration: Design_Iteration, **_) -> Iterable[Modifier]:
     """
@@ -91,6 +114,18 @@ def sorted_modifier_by_changes_on_lowest_scoring_objective(heuristic_map: Heuris
     :return: modifiers sorted by their history of changing the lowest scoring objective in the iteration
     """
     lowest_score, objective = design_iteration.objectives_by_scores[0]
+    return sorted_by_modifier_objective_changes(heuristic_map=heuristic_map, objective=objective)
+
+
+def sorted_modifier_by_changes_on_most_important_objective(heuristic_map: Heuristic_Map,
+                                                           design_iteration: Design_Iteration, **_) -> Iterable[Modifier]:
+    """
+
+    :param heuristic_map: map of modifiers to objectives
+    :param design_iteration: iteration to be modified
+    :return: modifiers sorted by their history of changing the most important objective to the iteration
+    """
+    most_important, objective = design_iteration.objectives_by_scores[-1]
     return sorted_by_modifier_objective_changes(heuristic_map=heuristic_map, objective=objective)
 
 

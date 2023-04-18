@@ -5,7 +5,7 @@ from optimizer.Design_Iteration import Design_Iteration
 from optimizer.Design_Population import Design_Population
 
 
-def stop_at_N_iterations(design_population: Design_Population, n=100, **_) -> bool:
+def stop_at_N_iterations(design_population: Design_Population, n=1000, **_) -> bool:
     """
     :param design_population: population created during optimization
     :param n: number of iterations to stop at

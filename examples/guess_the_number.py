@@ -1,3 +1,5 @@
+"""Example optimization code that guess a target number between 0 and 100"""
+
 import random
 
 from heuristics.Heuristic_Map import Heuristic_Map
@@ -47,9 +49,7 @@ def increment(number: int) -> int:
     :param number: number to increment.
     :return: incremented number by 1
     """
-    i = min(number + 1, 100)
-    print(f"{number} ^ {i}")
-    return i
+    return min(number + 1, 100)
 
 
 @guess_number_heuristic(Heuristic_Type.Modifier)
@@ -58,9 +58,7 @@ def decrement(number: int) -> int:
     :param number: number to decrement.
     :return: decremented number by 1
     """
-    i = max(number - 1, 0)
-    print(f"{number} v {i}")
-    return i
+    return max(number - 1, 0)
 
 
 def _guess_the_number():
@@ -81,7 +79,7 @@ def _guess_the_number():
                                                                                              design_population=design_population,
                                                                                              criteria=[stop_at_threshold_score, stop_at_N_iterations])
 
-    guesses = [random.randint(0, 100) for _ in range(0, 10)]
+    guesses = [random.randint(0, 100)]
     optimizer = Optimizer(design_selector, modifier_selector, stopping_criteria)
     population = optimizer.optimize(objective_function, heuristic_map, guesses)
     return population.top_N_iterations(1)
@@ -93,14 +91,17 @@ def guess_the_number():
     :return: top iteration from population
     """
     objective_function = Objective_Function()
-    le_objective = guess_number_heuristic_library.get_objective("less_than_number")
+    le_objective = guess_number_heuristic_library.get_objective(less_than_number)
     objective_function.add_objective_by_weight(le_objective, 1.0)
-    ge_objective = guess_number_heuristic_library.get_objective("greater_than_number")
+    ge_objective = guess_number_heuristic_library.get_objective(greater_than_number)
     objective_function.add_objective_by_weight(ge_objective, 1.0)
-    increment_modifier = guess_number_heuristic_library.get_modifier("increment")
-    decrement_modifier = guess_number_heuristic_library.get_modifier("decrement")
-    heuristic_map = Heuristic_Map({increment_modifier: {le_objective: 1.0},
-                                   decrement_modifier: {ge_objective: 1.0}})
+    increment_modifier = guess_number_heuristic_library.get_modifier(increment)
+    decrement_modifier = guess_number_heuristic_library.get_modifier(decrement)
+    # heuristic_map = Heuristic_Map({increment_modifier: {le_objective: 1.0},
+    #                                decrement_modifier: {ge_objective: 1.0}})
+    heuristic_map = Heuristic_Map({})
+    heuristic_map.add_heuristic(le_objective, increment_modifier, 1.0)
+    heuristic_map.add_heuristic(ge_objective, decrement_modifier, 1.0)
 
     design_selector = Highest_Scoring_Design()
     modifier_selector = Best_For_Lowest_Objective_Modifier()

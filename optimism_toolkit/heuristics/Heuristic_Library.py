@@ -1,6 +1,11 @@
-import inspect
-from typing import Dict, Callable, Optional
+"""Structure for tracking objectives and modifiers for a registered design type"""
 
+import inspect
+from copy import deepcopy
+from typing import Dict, Callable, Optional, Union
+
+from heuristics.Heuristic_Map import Heuristic_Map
+from heuristics.Objective_Function import Objective_Function
 from heuristics.heuristic_functions import Objective, Modifier, Heuristic_Type
 
 
@@ -12,19 +17,25 @@ class Heuristic_Library:
         self._objectives: Dict[str: Objective] = {}
         self._modifiers: Dict[str: Modifier] = {}
 
-    def get_objective(self, name: str) -> Objective:
+    def get_objective(self, name: Union[str, Callable]) -> Objective:
         """
         :param name:
         :return: objective by name
         """
-        return self._objectives[name]
+        if isinstance(name, str):
+            return self._objectives[name]
+        else:
+            return self._objectives[Heuristic_Library.name_heuristic(name)]
 
-    def get_modifier(self, name: str) -> Modifier:
+    def get_modifier(self, name: Union[str, Callable]) -> Modifier:
         """
         :param name:
-        :return: modifier by name
+        :return: objective by name
         """
-        return self._modifiers[name]
+        if isinstance(name, str):
+            return self._modifiers[name]
+        else:
+            return self._modifiers[Heuristic_Library.name_heuristic(name)]
 
     def add_function(self, heuristic_type: Heuristic_Type, function: Callable, name: Optional[str], deep_copy: bool = False, **function_kwargs):
         """
@@ -47,12 +58,7 @@ class Heuristic_Library:
         :param objective_kwargs: keyword arguments to add to the objective
         """
         if objective_name is None:
-            if inspect.ismethod(objective_callable):
-                objective_name = objective_callable.__qualname__
-            elif inspect.isfunction(objective_callable) or inspect.isclass(objective_callable):
-                objective_name = objective_callable.__name__
-            else:
-                assert False, f"{objective_callable} has not default name. Expected method, function, or callable class"
+            objective_name = self.name_heuristic(objective_callable)
         if objective_name in self._objectives:
             print(f"OPTIMISM Warning: overloading objective {objective_name}")
         if len(objective_kwargs) == 0:
@@ -69,12 +75,7 @@ class Heuristic_Library:
         :param modifier_kwargs: keyword arguments to add to the modifier
         """
         if modifier_name is None:
-            if inspect.ismethod(modifier_callable):
-                modifier_name = modifier_callable.__qualname__
-            elif inspect.isfunction(modifier_callable) or inspect.isclass(modifier_callable):
-                modifier_name = modifier_callable.__name__
-            else:
-                assert False, f"{modifier_callable} has not default name. Expected method, function, or callable class"
+            modifier_name = self.name_heuristic(modifier_callable)
         if len(modifier_kwargs) == 0:
             if deep_copy:
                 def copy_and_modify_no_kwargs(design):
@@ -82,8 +83,9 @@ class Heuristic_Library:
                     :param design: design to be copied and modify
                     :return: copy design then modify the copy
                     """
-                    copied_design = design.deep_copy()
-                    return modifier_callable(copied_design)
+                    copied_design = deepcopy(design)
+                    modifier_callable(copied_design)
+                    return copied_design
 
                 modifier = Modifier(copy_and_modify_no_kwargs, modifier_name)
             else:
@@ -95,10 +97,41 @@ class Heuristic_Library:
                     :param design: design to be copied and modify
                     :return: copy design then modify the copy with modifier key word arguments
                     """
-                    copied_design = design.deep_copy()
-                    return modifier_callable(copied_design, **modifier_kwargs)
+                    copied_design = deepcopy(design)
+                    modifier_callable(copied_design, **modifier_kwargs)
+                    return copied_design
 
                 modifier = Modifier(copy_and_modify, modifier_name)
             else:
                 modifier = Modifier(lambda design: modifier_callable(design, **modifier_kwargs), modifier_name)
         self._modifiers[modifier_name] = modifier
+
+    @staticmethod
+    def name_heuristic(function):
+        """
+        :param function: function to infer name from
+        :return: inferred name of the heuristic function provided
+        """
+        if inspect.ismethod(function):
+            function_name = function.__qualname__
+        elif inspect.isfunction(function) or inspect.isclass(function):
+            function_name = function.__name__
+        else:
+            assert False, f"{function} has not default name. Expected method, function, or callable class"
+
+        if hasattr(function, "base_function"):  # modified heuristic function such as an inverted objective
+            base_function_name = Heuristic_Library.name_heuristic(function.base_function)
+            function_name = f"{function_name}.{base_function_name}"
+        return function_name
+
+    def uniform_objective_function(self) -> Objective_Function:
+        """
+        :return: Objective function with equal weights on all objectives
+        """
+        return Objective_Function({o: 1.0 for o in self._objectives})
+
+    def uniform_heuristic_map(self) -> Heuristic_Map:
+        """
+        :return: heuristic map with equal weights on all modifier objective pairs
+        """
+        return Heuristic_Map({m: {o: 1.0 for o in self._objectives} for m in self._modifiers})

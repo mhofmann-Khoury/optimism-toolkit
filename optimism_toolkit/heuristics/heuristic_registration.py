@@ -1,3 +1,5 @@
+"""Code base for registering objectives and modifiers from a class or set of functions for a specific domain area"""
+
 from typing import Callable, Optional, Tuple
 
 from heuristics.Heuristic_Library import Heuristic_Library
@@ -10,7 +12,7 @@ def make_heuristic_library(library_name: str) -> Tuple[Callable, Heuristic_Libra
     """
     heuristic_library: Heuristic_Library = Heuristic_Library(library_name)
 
-    def heuristic_decorator(heuristic_type: Heuristic_Type, name: Optional[str] = None, deep_copy:bool = False, **function_kwargs) -> Callable:
+    def heuristic_decorator(heuristic_type: Heuristic_Type, name: Optional[str] = None, deep_copy: bool = False, **function_kwargs) -> Callable:
         """
         :param heuristic_type: Modifier or Objective
         :param name: name of function or None if derived from function

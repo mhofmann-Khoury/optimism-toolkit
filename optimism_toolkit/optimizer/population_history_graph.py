@@ -75,7 +75,7 @@ class Modification_History:
         """
         prior_new_node = self.add_design_iteration(prior_iteration)
         current_new_node = self.add_design_iteration(current_iteration)
-        if prior_new_node or current_new_node:
+        if prior_new_node or current_new_node or (not self.graph.has_edge(prior_iteration, current_iteration)):
             edge_data = Design_Change(prior_iteration, current_iteration)
             self.graph.add_edge(prior_iteration, current_iteration, edge_data=edge_data)
         else:

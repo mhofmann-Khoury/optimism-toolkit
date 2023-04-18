@@ -57,7 +57,21 @@ class Heuristic_Map:
         Data Structure that manages the relationship between sub-objectives of the objective function and the modifiers that change designs in an optimization process
     """
 
-    def __init__(self, heuristic_weights: Dict[Modifier, Dict[Objective, float]],
+    @staticmethod
+    def objective_to_modifier_heuristic_weights(heuristic_weights: Dict[Objective, Dict[Modifier, float]]) -> Dict[Modifier, Dict[Objective, float]]:
+        """
+        :param heuristic_weights: heuristic weights in inverted objective modifier order
+        :return:
+        """
+        corrected_weights = {}
+        for objective, mod_weights in heuristic_weights.items():
+            for modifier, weight in mod_weights.items():
+                if modifier not in corrected_weights:
+                    corrected_weights[modifier] = {}
+                corrected_weights[modifier][objective] = weight
+        return corrected_weights
+
+    def __init__(self, heuristic_weights: Union[Dict[Modifier, Dict[Objective, float]], Dict[Objective, Dict[Modifier, float]]],
                  modifier_keys: Optional[Dict[str, Callable]] = None, objective_modifier_keys: Optional[Dict[str, Callable]] = None):
         if objective_modifier_keys is None:
             objective_modifier_keys = {}
@@ -69,6 +83,8 @@ class Heuristic_Map:
             objective_modifier_keys[enum] = enum
         self._modifier_keys: Dict[Union[str, Enum], Callable] = modifier_keys
         self._objective_modifier_keys: Dict[Union[str, Enum], Callable] = objective_modifier_keys
+        if len(heuristic_weights) > 0 and isinstance([*heuristic_weights.keys()][0], Objective):
+            heuristic_weights = Heuristic_Map.objective_to_modifier_heuristic_weights(heuristic_weights)
         self._heuristic_weights: Dict[Modifier: Dict[Objective, float]] = heuristic_weights
         self._update_by_heuristic_weights()
 
@@ -84,16 +100,27 @@ class Heuristic_Map:
                                                                                                                  for s, k in self._objective_modifier_keys.items()}
                                                                                                              for o in self.objectives}
 
-    def add_heuristic_weights(self, heuristic_weights: Dict[Modifier, Dict[Objective, float]]):
+    def add_heuristic_weights(self, heuristic_weights: Union[Dict[Modifier, Dict[Objective, float]], Dict[Objective, Dict[Modifier, float]]]):
         """
         :param heuristic_weights: New heuristic weights to add to heuristic map
         """
+        if isinstance([*heuristic_weights.keys()][0], Objective):
+            heuristic_weights = Heuristic_Map.objective_to_modifier_heuristic_weights(heuristic_weights)
         for modifier, objective_weights in heuristic_weights.items():
             if modifier not in self._heuristic_weights:
                 self._heuristic_weights[modifier] = {}
             for objective, weight in objective_weights.items():
                 self._heuristic_weights[modifier][objective] = weight
         self._update_by_heuristic_weights()
+
+    def add_heuristic(self, objective: Objective, modifier: Modifier, weight: float):
+        """
+        Add a heuristic between the objective and modifier of a given weight
+        :param objective:
+        :param modifier:
+        :param weight:
+        """
+        self.add_heuristic_weights({objective: {modifier: weight}})
 
     def _add_objectives(self):
         for m in self.modifiers:

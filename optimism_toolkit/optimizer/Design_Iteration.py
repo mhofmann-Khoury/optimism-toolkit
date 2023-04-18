@@ -1,10 +1,11 @@
 """Design Iteration Class"""
 import random
 from enum import Enum
-from typing import Any, Hashable, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
 
-from sortedcontainers import SortedKeyList, SortedList
+from sortedcontainers import SortedKeyList
 
+from heuristics.Objective_Function import Objective_Function
 from heuristics.heuristic_functions import Objective
 
 
@@ -13,10 +14,13 @@ class Design_Iteration:
         Used to keep track of design classes for any domain
     """
 
-    def __init__(self, design: Any, iteration: int, score: float, objective_scores: Dict[Objective, float]):
+    def __init__(self, design: Any, iteration: int, score: float, objective_scores: Dict[Objective, float], objective_function: Objective_Function):
+        self.objective_function = objective_function
         self.score: float = score
         self.objective_scores: Dict[Objective, float] = objective_scores
         self.objectives_by_scores: SortedKeyList[Tuple[float, Objective]] = SortedKeyList([(w, o) for o, w in self.objective_scores.items()], key=lambda pair: pair[0])
+        self.objective_importance: Dict[Objective, float] = self._objectives_by_importance()
+        self.objectives_by_importance: SortedKeyList[Tuple[float, Objective]] = SortedKeyList([(i, o) for o, i in self.objective_importance.items()], key=lambda pair: pair[0])
         self._designs = {design}  # multiple designs may result in the evaluation on this iteration, however this is ignored in optimization
         self.iterations: List[int] = [iteration]
         self.visits = 1
@@ -77,11 +81,27 @@ class Design_Iteration:
             self.objective_increases[o] += int(design_change.objective_increased[o])
             self.objective_decreases[o] += int(design_change.objective_decreased[o])
 
+    def _objectives_by_importance(self) -> Dict[Objective, float]:
+        """
+        :return: dictionary of objectives keyed to normalized importance to this design iteration
+        """
+        def _importance(objective: Objective) -> float:
+            value = self.objective_function.objectives_to_weights[objective] * (1.0 - self.objective_scores[objective])
+            return value
+
+        values = {o: _importance(o) for o in self.objective_function}
+        total = sum(values.values())
+        if total == 0.0:
+            normalized = {o: 0.0 for o in self.objective_function}
+        else:
+            normalized = {o: values[o] / total for o in self.objective_function}
+        return normalized
+
     def __hash__(self):
         return self.iteration  # use first iteration since it will not change and is guaranteed to exist
 
     def __str__(self):
-        return f"I{self.iteration} s{self.score:1.2f} -> {self.design}"
+        return f"I{self.iteration} scored {self.score:1.2f} of {self.objective_function.perfect_score} ({self.score/self.objective_function.perfect_score *100:1.2f}%) -> {self.design}"
 
     def __repr__(self):
         return str(self)
@@ -131,6 +151,7 @@ class Objective_Iteration_Keys(Enum):
     Score_Changes = 2
     Score_Increases = 3
     Score_Decreases = 4
+    Importance = 4
 
     def __call__(self, iteration: Design_Iteration, objective: Objective):
         if self is Objective_Iteration_Keys.Scores:
@@ -141,6 +162,8 @@ class Objective_Iteration_Keys(Enum):
             return iteration.objective_increases[objective]
         elif self is Objective_Iteration_Keys.Score_Decreases:
             return iteration.objective_decreases[objective]
+        elif self is Objective_Iteration_Keys.Importance:
+            return iteration.objective_importance[objective]
 
     def __hash__(self):
         return hash(self.name)

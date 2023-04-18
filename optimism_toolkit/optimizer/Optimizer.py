@@ -43,7 +43,7 @@ class Optimizer:
 
         # add starting designs to population
         for design in seed_designs:
-            seed_iteration = population.add_to_population(design)
+            seed_iteration, new_seed = population.add_to_population(design)
             stop = self._is_stop(design_iteration=seed_iteration, design_population=population)
             if stop:
                 print(f"Reached Stopping Criteria in Seed Values {seed_iteration}")
@@ -56,12 +56,16 @@ class Optimizer:
             modifier = self._select_modifier(prior_iteration, heuristic_map)
             # todo check modifier cache
             next_design = modifier(prior_iteration.design)
-            next_iteration = population.add_to_population(next_design, prior_iteration, modifier)
+            next_iteration, new_iteration = population.add_to_population(next_design, prior_iteration, modifier)
             stop = self._is_stop(design_iteration=next_iteration, design_population=population)
             if stop:
                 print(f"Reached Stopping Criteria at {population.iteration_count} iterations")
                 return population
             else:
+                if new_iteration:
+                    print(f"Found new design {next_iteration} by modifier: {modifier}")
+                else:
+                    print(f"Revisited iteration{next_iteration.iteration} by modifier: {modifier}")
                 steps += 1
 
         print(f"Warning: Optimizer did not converge before reaching {population.iteration_count} limit")

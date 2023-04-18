@@ -7,7 +7,7 @@ from sortedcontainers import SortedDict, SortedKeyList
 from heuristics.Objective_Function import Objective_Function
 from heuristics.heuristic_functions import Modifier, Objective
 from optimizer.Design_Iteration import Design_Iteration, Iteration_Keys, Objective_Iteration_Keys
-from optimizer.population_tracking.population_history_graph import Modification_History
+from optimizer.population_history_graph import Modification_History
 
 
 class Design_Population:
@@ -46,7 +46,7 @@ class Design_Population:
         """
         return design_iteration.score / self.objective_function.perfect_score
 
-    def top_N_iterations(self, iteration_count: int, objective: Optional[Objective]= None):
+    def top_N_iterations(self, iteration_count: int, objective: Optional[Objective] = None):
         """
         :param iteration_count: number of iterations to return
         :param objective: objective to collect from or general scores if none
@@ -129,7 +129,7 @@ class Design_Population:
             # remove from modification history
             self.modification_history.remove_iteration(worst_iteration)
 
-    def add_to_population(self, design: Any, prior_iteration: Optional[Design_Iteration] = None, modifier: Optional[Modifier] = None) -> Design_Iteration:
+    def add_to_population(self, design: Any, prior_iteration: Optional[Design_Iteration] = None, modifier: Optional[Modifier] = None) -> Tuple[Design_Iteration, bool]:
         """
         Adds a design to the population structure
         :param prior_iteration: the iteration that this design was created from with a modifier
@@ -143,10 +143,12 @@ class Design_Population:
         iteration_count = self._iteration_count
         self._iteration_count += 1
         score, objective_scores = self._evaluate_design(design)
-        iteration = Design_Iteration(design, iteration_count, score, objective_scores)
+        iteration = Design_Iteration(design, iteration_count, score, objective_scores, self.objective_function)
         # check if an iteration with equivalent evaluation is already in the population
+        new_iteration = True
         matching_iteration = self.matching_iteration(iteration)
         if matching_iteration is not None:
+            new_iteration = False
             self._remove_from_sorted_iterations(matching_iteration)  # remove to support resorting after update
             matching_iteration.add_iteration(iteration)  # update iteration usage information
             iteration = matching_iteration  # replace with the one that is already in the population
@@ -160,7 +162,7 @@ class Design_Population:
             iteration.add_prior_iteration_changes(design_change)
             modifier.record_application(design_change, new_modifier_on_edge)
         self.last_iteration = iteration
-        return iteration
+        return iteration, new_iteration
 
     def _add_iteration_by_scores(self, iteration: Design_Iteration):
         if iteration.score not in self.iterations_by_scores:
